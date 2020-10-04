@@ -8,12 +8,8 @@ import math
 class ProductProduct(models.Model):
     _inherit = 'product.product'
 
-    def _compute_quantities_dict(
-            self, lot_id, owner_id, package_id,
-            from_date=False, to_date=False):
-        res = super()._compute_quantities_dict(
-            lot_id, owner_id, package_id, from_date=from_date, to_date=to_date)
-        packs = self.filtered('pack_ok')
+    def _compute_quantities(self):
+        packs = self._context.get('include_pack') and self.filtered('pack_ok') or self.browse([])
         for product in packs.with_context(prefetch_fields=False):
             pack_qty_available = []
             pack_virtual_available = []
@@ -30,15 +26,9 @@ class ProductProduct(models.Model):
                         subproduct_stock.virtual_available / sub_qty))
                     pack_free_qty.append(math.floor(
                         subproduct_stock.free_qty / sub_qty))
-            res[product.id] = {
-                'qty_available': (
-                    pack_qty_available and min(pack_qty_available) or False),
-                'incoming_qty': 0,
-                'outgoing_qty': 0,
-                'virtual_available': (
-                    pack_virtual_available and
-                    min(pack_virtual_available) or False),
-                'free_qty': (
-                    pack_free_qty and min(pack_free_qty) or False),
-            }
-        return res
+            product.qty_available = pack_qty_available and min(pack_qty_available) or False
+            product.incoming_qty = 0
+            product.outgoing_qty = 0
+            product.virtual_available = pack_virtual_available and min(pack_virtual_available) or False
+            product.free_qty = pack_free_qty and min(pack_free_qty) or False
+        super(ProductProduct, self - packs)._compute_quantities()
