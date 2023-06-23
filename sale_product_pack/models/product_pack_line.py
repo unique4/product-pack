@@ -42,6 +42,10 @@ class ProductPack(models.Model):
                 "name": "{}{}".format("> " * (line.pack_depth + 1), sol.name),
             }
         )
+        if hasattr(line, 'route_id'):
+            vals.update({
+                'route_id': line.route_id.id
+            })
         return vals
 
     def get_price(self):
